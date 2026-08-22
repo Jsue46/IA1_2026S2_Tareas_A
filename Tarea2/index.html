@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Cumplimiento SEO: Title Tag -->
+    <title>Inventario RPG - Búsqueda de ítems</title>
+    <!-- Cumplimiento SEO: Meta description -->
+    <meta name="description" content="Interfaz sencilla para buscar ítems en un inventario de RPG conectado a Prolog.">
+    <style>
+        /* Estilos usando CSS Vanilla sin Tailwind, diseño limpio y sencillo */
+        :root {
+            --primary-bg: #1e1e2f;
+            --container-bg: #2a2a40;
+            --text-color: #f1f1f1;
+            --accent-color: #6c5ce7;
+            --accent-hover: #5b4cc4;
+            --error-color: #ff7675;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        /* Semantic HTML: Heading único principal */
+        h1 {
+            margin-top: 0;
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background-color: #3b3b55;
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            padding: 12px 24px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+
+        /* Ocultos por defecto, mostrados por JS */
+        .results {
+            display: none;
+            text-align: left;
+            background-color: #3b3b55;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .results p {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+
+        .error {
+            display: none;
+            color: var(--error-color);
+            background-color: rgba(255, 118, 117, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid var(--error-color);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Interfaz web sencilla con formulario de entrada de texto -->
+        <h1>Gestión de Inventarios RPG</h1>
+        
+        <div class="form-group">
+            <input type="text" id="itemInput" placeholder="Busca un ítem (ej. espada, brujula)..." aria-label="Buscar ítem">
+            <button onclick="buscarItem()" id="searchButton">Buscar</button>
+        </div>
+
+        <!-- Renderizado dinámico en pantalla (JSON) -->
+        <div id="resultContainer" class="results">
+            <p><strong>Total de Ítems:</strong> <span id="valTotal"></span></p>
+            <p><strong>Inventario Invertido:</strong> <span id="valInvertido"></span></p>
+            <p><strong>Inventario con Duplicados (msort):</strong> <span id="valOrdenado"></span></p>
+            <p><strong>Inventario sin Duplicados (sort):</strong> <span id="valUnico"></span></p>
+        </div>
+
+        <!-- Renderizado dinámico de errores -->
+        <div id="errorContainer" class="error"></div>
+    </div>
+
+    <script>
+        // Utiliza JavaScript (fetch) para enviar dato ingresado de forma asíncrona
+        async function buscarItem() {
+            const inputElement = document.getElementById('itemInput');
+            const item = inputElement.value.trim();
+            const resultDiv = document.getElementById('resultContainer');
+            const errorDiv = document.getElementById('errorContainer');
+            const btn = document.getElementById('searchButton');
+
+            // Limpiar estados anteriores
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            if (!item) {
+                errorDiv.innerText = "Por favor, ingresa el nombre de un ítem para buscar.";
+                errorDiv.style.display = 'block';
+                inputElement.focus();
+                return;
+            }
+
+            // Deshabilitar botón durante carga
+            btn.disabled = true;
+            btn.innerText = "Buscando...";
+
+            try {
+                // Consume la API enviando el ítem (fetch)
+                const response = await fetch(`http://127.0.0.1:5000/buscar?item=${item}`);
+                const data = await response.json(); // Captura la respuesta JSON
+
+                if (response.ok) {
+                    // Plasma los datos dinámicamente en el DOM (HTML)
+                    document.getElementById('valTotal').innerText = data.TotalItems;
+                    document.getElementById('valInvertido').innerText = "[ " + data.InventarioInvertido.join(", ") + " ]";
+                    document.getElementById('valOrdenado').innerText = "[ " + data.InventarioOrdenado.join(", ") + " ]";
+                    document.getElementById('valUnico').innerText = "[ " + data.InventarioUnico.join(", ") + " ]";
+                    
+                    // Muestra el div
+                    resultDiv.style.display = 'block';
+                } else {
+                    // Muestra el error arrojado por la API (ej. item no encontrado)
+                    errorDiv.innerText = data.error || "Ocurrió un error al buscar.";
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                // Maneja rechazos de red
+                errorDiv.innerText = "Error de red: No se pudo conectar con el Backend. ¿Está encendido el servidor Flask?";
+                errorDiv.style.display = 'block';
+            } finally {
+                // Restaurar botón
+                btn.disabled = false;
+                btn.innerText = "Buscar";
+            }
+        }
+        
+        // Permitir búsqueda usando la tecla Enter
+        document.getElementById('itemInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                buscarItem();
+            }
+        });
+    </script>
+</body>
+</html>
